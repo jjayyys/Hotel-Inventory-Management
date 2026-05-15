@@ -13,6 +13,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { BulkRecalculateRecommendationsDto } from './dto/bulk-recalculate-recommendations.dto';
 import { GenerateRecommendationExplanationDto } from './dto/generate-recommendation-explanation.dto';
 import { QueryRecommendationsDto } from './dto/query-recommendations.dto';
 import { RecalculateRecommendationsDto } from './dto/recalculate-recommendations.dto';
@@ -50,11 +51,27 @@ export class RecommendationsController {
     return this.recommendationsService.recalculate(dto);
   }
 
+  @ApiOperation({
+    summary: 'Recalculate deterministic recommendations for multiple hotels',
+  })
+  @Roles(...RECALCULATE_ROLES)
+  @Post('bulk-recalculate')
+  bulkRecalculate(@Body() dto: BulkRecalculateRecommendationsDto) {
+    return this.recommendationsService.bulkRecalculate(dto);
+  }
+
   @ApiOperation({ summary: 'List persisted replenishment recommendations' })
   @Roles(...READ_ROLES)
   @Get()
   findAll(@Query() query: QueryRecommendationsDto) {
     return this.recommendationsService.findAll(query);
+  }
+
+  @ApiOperation({ summary: 'Get a single recommendation by ID' })
+  @Roles(...READ_ROLES)
+  @Get(':id')
+  findById(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.recommendationsService.findById(id);
   }
 
   @ApiOperation({

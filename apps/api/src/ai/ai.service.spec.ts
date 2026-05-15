@@ -44,7 +44,7 @@ describe('AiService', () => {
 
   it('uses provider output when generation succeeds', async () => {
     orchestrator.generateWithFallback.mockResolvedValue({
-      provider: 'anthropic',
+      provider: 'gemini',
       text: 'Stock is below the reorder point and lead time pressure is rising.',
     });
 
@@ -70,7 +70,7 @@ describe('AiService', () => {
     });
 
     expect(result).toEqual({
-      provider: 'anthropic',
+      provider: 'gemini',
       text: 'Stock is below the reorder point and lead time pressure is rising.',
       fallback: false,
     });

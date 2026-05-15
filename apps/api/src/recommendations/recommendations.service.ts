@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReplenishmentService } from '../replenishment/replenishment.service';
+import { BulkRecalculateRecommendationsDto } from './dto/bulk-recalculate-recommendations.dto';
 import { GenerateRecommendationExplanationDto } from './dto/generate-recommendation-explanation.dto';
 import { QueryRecommendationsDto } from './dto/query-recommendations.dto';
 import { RecalculateRecommendationsDto } from './dto/recalculate-recommendations.dto';
@@ -192,5 +193,102 @@ export class RecommendationsService {
       cached: false,
       fallback: explanationResponse.fallback,
     };
+  }
+
+  async findById(id: string) {
+    const recommendation =
+      await this.prisma.replenishmentRecommendation.findUnique({
+        where: { id },
+        include: {
+          sku: {
+            include: {
+              supplier: true,
+              supplier_lead_times: true,
+            },
+          },
+        },
+      });
+
+    if (!recommendation) {
+      throw new NotFoundException(`Recommendation ${id} was not found.`);
+    }
+
+    return recommendation;
+  }
+
+  async bulkRecalculate(dto: BulkRecalculateRecommendationsDto) {
+    const daysWindow = dto.daysWindow ?? 30;
+    const results: Record<string, unknown> = {};
+
+    for (const hotelId of dto.hotelIds) {
+      try {
+        const result = await this.recalculate({
+          hotelId,
+          daysWindow,
+        });
+        results[hotelId] = {
+          status: 'success',
+          data: result,
+        };
+      } catch (error) {
+        results[hotelId] = {
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }
+
+    return {
+      daysWindow,
+      hotelCount: dto.hotelIds.length,
+      results,
+    };
+  }
+
+  private buildRuleBasedFallback(recommendation: {
+    current_stock: number | { toNumber(): number };
+    reorder_point: number | { toNumber(): number };
+    recommended_quantity: number | { toNumber(): number };
+    eoq_value: number | { toNumber(): number };
+    estimated_days_of_cover: number | { toNumber(): number };
+    sku: {
+      unit: string;
+      shelf_life_days: number;
+      safety_stock: number | { toNumber(): number };
+    };
+  }, recentWaste: number, leadTimeDays: number): string {
+    const currentStock = this.toNumber(recommendation.current_stock);
+    const reorderPoint = this.toNumber(recommendation.reorder_point);
+    const recommendedQuantity = this.toNumber(
+      recommendation.recommended_quantity,
+    );
+    const eoqValue = this.toNumber(recommendation.eoq_value);
+    const daysOfCover = this.toNumber(
+      recommendation.estimated_days_of_cover,
+    );
+    const safetyStock = this.toNumber(recommendation.sku.safety_stock);
+
+    const reorderSignal =
+      currentStock < reorderPoint
+        ? `Current stock (${currentStock}) is below the reorder point (${reorderPoint}), so the system recommends ordering ${recommendedQuantity} ${recommendation.sku.unit}.`
+        : `Current stock (${currentStock}) is above the reorder point (${reorderPoint}), so no immediate reorder is recommended.`;
+
+    const wasteSignal =
+      recentWaste > 0
+        ? `Recent waste of ${recentWaste} ${recommendation.sku.unit} suggests added shelf-life pressure.`
+        : 'Recent waste is low, so waste pressure is limited in the latest cycle.';
+
+    const coverSignal =
+      daysOfCover <= leadTimeDays
+        ? `Estimated cover is only ${daysOfCover.toFixed(1)} days against a ${leadTimeDays}-day lead time, creating supply risk.`
+        : `Estimated cover is ${daysOfCover.toFixed(1)} days with a ${leadTimeDays}-day lead time.`;
+
+    return `${reorderSignal} ${coverSignal} Safety stock is set at ${safetyStock} ${recommendation.sku.unit} and EOQ is ${eoqValue.toFixed(2)} ${recommendation.sku.unit}. ${wasteSignal}`;
+  }
+
+  private toNumber(
+    value: number | { toNumber(): number },
+  ): number {
+    return typeof value === 'number' ? value : value.toNumber();
   }
 }

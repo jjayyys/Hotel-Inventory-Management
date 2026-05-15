@@ -1,12 +1,14 @@
 # Implementation Plan
 
-This document is a docs-to-code implementation guide for the Food Waste Management project. It is written for a Windows PowerShell workflow and assumes Node.js LTS, Docker Desktop, and PostgreSQL and Redis running through Docker. AI access is backend-only and should support this provider order: `Anthropic API -> Ollama qwen3:4b -> Ollama llama3.2`. The first implementation target is a working MVP, not the full final system in a single pass.
+This document is a docs-to-code implementation guide for the Food Waste Management project. It is written for a Windows PowerShell workflow and assumes Node.js LTS, Docker Desktop, and PostgreSQL and Redis running through Docker. AI access is backend-only and should support this provider order: `Gemini AI (Google AI Studio) -> Ollama qwen3:4b -> Ollama llama3.2`. The first implementation target is a working MVP, not the full final system in a single pass.
+
+Use `README.md` as the primary onboarding and daily-run guide for the current repository state. This document remains the detailed phase-by-phase implementation playbook and still includes bootstrap commands that were relevant when the monorepo was first scaffolded from a docs-first starting point.
 
 ## 1. Pre-Implementation Setup
 
 ### Purpose
 
-Validate that the local machine and repository are ready before any application scaffolding begins.
+Validate that the local machine and repository are ready before running or extending the current implementation.
 
 ### CLI Commands
 
@@ -34,31 +36,37 @@ Get-ChildItem -Force
 
 ### Expected Files or Folders at This Stage
 
+- `README.md`
 - `AGENTS.md`
 - `PROJECT.md`
 - `project_spec.md`
 - `tech_stack.md`
+- `implement_plan.md`
+- `apps`
+- `packages`
+- `docker-compose.yml`
 - `Food-Waste-Project.pdf`
 
-The repository should still be docs-only before scaffolding begins.
+The repository should already contain the implemented monorepo structure for normal local development.
 
 ### Manual Notes
 
 - No code changes should happen until all required tools are available
 - If Docker is installed but not running, start Docker Desktop before moving on
+- For current setup and run steps, follow `README.md` before revisiting historical bootstrap commands in later sections
 
 ### Verification Checklist
 
 - All CLI commands run successfully
 - Docker Compose responds with a version
-- The repository is still docs-only
-- No application folders such as `apps` or `packages` exist yet
+- The current checkout contains application folders such as `apps` and `packages`
+- The repository includes the root documentation set and infrastructure files needed for local development
 
 ## 2. Repository Structure
 
 ### Purpose
 
-Create the monorepo layout and scaffold the frontend, backend, and shared package structure using `npm workspaces`.
+Reference the monorepo layout and record the bootstrap commands originally used to scaffold the frontend, backend, and shared package structure using `npm workspaces`.
 
 ### Target Structure
 
@@ -112,6 +120,8 @@ FoodWaste/
 ```
 
 ### CLI Commands
+
+These are historical bootstrap commands for rebuilding the workspace from scratch. Most contributors working in the current repository should use the setup and run workflow in `README.md` instead of rerunning this section directly.
 
 ```powershell
 npm init -y
@@ -199,14 +209,13 @@ npm pkg set scripts.db:seed="npm exec --workspace apps/api prisma db seed"
 ### Backend Dependencies
 
 ```powershell
-npm install -w apps/api @nestjs/config @nestjs/swagger swagger-ui-express class-validator class-transformer @prisma/client prisma @prisma/adapter-pg pg @nestjs/jwt passport passport-jwt bcryptjs @nestjs/passport bullmq ioredis @anthropic-ai/sdk
-npm install -w apps/api -D @types/passport-jwt
+npm install -w apps/api @nestjs/config @nestjs/swagger swagger-ui-express class-validator class-transformer @prisma/client prisma @nestjs/jwt passport passport-jwt bcrypt @nestjs/passport bullmq ioredis @google/genai
+npm install -w apps/api -D @types/passport-jwt @types/bcrypt
 ```
 
-Compatibility note:
+Windows note:
 
-- `bcryptjs` is preferred in this project because it avoids native build issues that are common on some Windows development environments
-- Prisma ORM v7 uses `prisma.config.ts` for the database URL and `@prisma/adapter-pg` with `pg` for runtime PostgreSQL access
+- If `bcrypt` fails to install because native build tools are unavailable, use a compatible fallback approach for the local environment before continuing with authentication implementation
 
 ### Frontend Dependencies
 
@@ -228,15 +237,15 @@ Create the environment files:
 
 ```powershell
 Set-Content .env.example @'
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/food_waste
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/food_waste
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=replace-with-a-secure-secret
 AI_ENABLED=true
-AI_PROVIDER_ORDER=anthropic,ollama-qwen,ollama-llama
+AI_PROVIDER_ORDER=gemini,ollama-qwen,ollama-llama
 AI_TIMEOUT_MS=15000
 AI_ALLOW_FALLBACK=true
-ANTHROPIC_API_KEY=replace-with-anthropic-key
-ANTHROPIC_MODEL=replace-with-anthropic-model
+GEMINI_API_KEY=replace-with-gemini-key
+GEMINI_MODEL=gemini-2.5-flash
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_QWEN_MODEL=qwen3:4b
 OLLAMA_LLAMA_MODEL=llama3.2
@@ -244,15 +253,15 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
 '@
 
 Set-Content apps/api/.env @'
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/food_waste
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/food_waste
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=replace-with-a-secure-secret
 AI_ENABLED=true
-AI_PROVIDER_ORDER=anthropic,ollama-qwen,ollama-llama
+AI_PROVIDER_ORDER=gemini,ollama-qwen,ollama-llama
 AI_TIMEOUT_MS=15000
 AI_ALLOW_FALLBACK=true
-ANTHROPIC_API_KEY=replace-with-anthropic-key
-ANTHROPIC_MODEL=replace-with-anthropic-model
+GEMINI_API_KEY=replace-with-gemini-key
+GEMINI_MODEL=gemini-2.5-flash
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_QWEN_MODEL=qwen3:4b
 OLLAMA_LLAMA_MODEL=llama3.2
@@ -275,9 +284,12 @@ Get-ChildItem apps/web -Filter ".env*"
 - `AI_ENABLED`
 - `AI_PROVIDER_ORDER`
 - `AI_TIMEOUT_MS`
+- `AI_HEALTH_TIMEOUT_MS`
+- `AI_RETRY_ATTEMPTS`
+- `AI_RETRY_DELAY_MS`
 - `AI_ALLOW_FALLBACK`
-- `ANTHROPIC_API_KEY`
-- `ANTHROPIC_MODEL`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
 - `OLLAMA_BASE_URL`
 - `OLLAMA_QWEN_MODEL`
 - `OLLAMA_LLAMA_MODEL`
@@ -294,8 +306,8 @@ Get-ChildItem apps/web -Filter ".env*"
 
 - Add backend configuration loading using NestJS `ConfigModule`
 - Add frontend API base URL consumption in the HTTP layer
-- Never expose `ANTHROPIC_API_KEY` in frontend code
-- Keep all `Anthropic` and `Ollama` requests in backend services only
+- Never expose `GEMINI_API_KEY` in frontend code
+- Keep all `Gemini` and `Ollama` requests in backend services only
 - Implement AI provider selection and fallback through backend configuration, not frontend logic
 
 ### Verification Checklist
@@ -327,8 +339,7 @@ Optional later additions:
 - PostgreSQL database name: `food_waste`
 - PostgreSQL username: `postgres`
 - PostgreSQL password: `postgres`
-- PostgreSQL container port: `5432`
-- PostgreSQL host port for this project: `5433`
+- PostgreSQL port: `5432`
 - Redis port: `6379`
 - Use named volumes for persistence
 
@@ -344,7 +355,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -441,18 +452,14 @@ Translate the database schema from `project_spec.md` into a real Prisma schema b
 
 ```powershell
 npm exec --workspace apps/api prisma init -- --datasource-provider postgresql
-npm exec --workspace apps/api prisma validate
 npm exec --workspace apps/api prisma generate
-npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script
-npx prisma db execute --file prisma/migrations/<timestamp>_init_schema/migration.sql
-npx prisma migrate resolve --applied <timestamp>_init_schema
+npm exec --workspace apps/api prisma migrate dev --name init_schema
 npm exec --workspace apps/api prisma studio
 ```
 
 #### Expected Files or Folders
 
 - `apps/api/prisma/schema.prisma`
-- `apps/api/prisma.config.ts`
 - Prisma migration files
 - generated Prisma client
 
@@ -461,9 +468,6 @@ npm exec --workspace apps/api prisma studio
 - Implement all models from `project_spec.md`
 - Define enums, relations, UUID keys, decimal fields, JSON fields, and timestamps
 - Configure Prisma client as a NestJS module or provider
-- Remove `url` from the Prisma schema datasource block and configure the database URL in `prisma.config.ts`
-- Use `@prisma/adapter-pg` with `pg` when instantiating Prisma Client in the NestJS runtime
-- If direct `prisma migrate dev` is not suitable for the initial baseline on the local environment, generate the baseline SQL with `prisma migrate diff`, apply it with `prisma db execute`, and register it with `prisma migrate resolve`
 
 #### Verification Checklist
 
@@ -481,7 +485,6 @@ Create realistic mock data to support development, testing, dashboards, and EOQ 
 #### CLI Commands
 
 ```powershell
-npm install -w apps/api -D tsx
 npm pkg set scripts.db:seed="npm exec --workspace apps/api prisma db seed"
 npm run db:seed
 npm exec --workspace apps/api prisma studio
@@ -489,9 +492,8 @@ npm exec --workspace apps/api prisma studio
 
 #### Expected Files or Folders
 
-- `apps/api/prisma.config.ts` with Prisma 7 seed configuration
 - Prisma seed configuration
-- `apps/api/prisma/seed.ts`
+- seed script files under the backend workspace
 
 #### Manual Code Editing Still Required
 
@@ -503,8 +505,6 @@ npm exec --workspace apps/api prisma studio
 - Create seed implementation for occupancy records
 - Create seed implementation for waste logs
 - Create seed implementation for purchase orders
-- Configure Prisma 7 seeding through `prisma.config.ts` using a command such as `tsx prisma/seed.ts`
-- Use the same Prisma PostgreSQL adapter pattern in the seed script as the backend runtime
 
 #### Verification Checklist
 
@@ -728,15 +728,16 @@ On Windows, the Ollama desktop install may already start the local service autom
 - prompt templates or prompt-building helpers
 - provider abstraction and provider implementation files
 - provider health-check or fallback orchestration helpers
+- protected provider status endpoint files
 
 #### Manual Code Editing Still Required
 
 - Install Ollama locally before backend integration if local fallback is required
 - Implement backend AI service only
 - Create a provider interface shared by all AI providers
-- Implement `Anthropic` provider as the first-choice hosted provider
+- Implement `Gemini` provider as the first-choice hosted provider
 - Implement `Ollama` provider using `OLLAMA_BASE_URL`
-- Configure fallback order as `Anthropic API -> Ollama qwen3:4b -> Ollama llama3.2`
+- Configure fallback order as `Gemini AI (Google AI Studio) -> Ollama qwen3:4b -> Ollama llama3.2`
 - Build prompts using known recommendation and report data
 - Build prompts from deterministic outputs, not from unrestricted raw database dumps
 - Add explanation endpoints or internal service methods
@@ -744,6 +745,10 @@ On Windows, the Ollama desktop install may already start the local service autom
 - Add provider health checks and model-availability checks
 - Keep API keys and local model access out of frontend code
 - Return deterministic results even if all AI providers fail
+
+Current implementation note:
+
+- The current repository now includes retry-aware provider orchestration plus a protected `GET /ai/status` endpoint for provider configuration, reachability, and model-availability checks
 
 #### Ollama Setup Workflow
 
@@ -756,25 +761,26 @@ On Windows, the Ollama desktop install may already start the local service autom
 7. Test the local chat API at `http://localhost:11434/api/chat`
 8. Configure backend `.env` values for `OLLAMA_BASE_URL`, `OLLAMA_QWEN_MODEL`, and `OLLAMA_LLAMA_MODEL`
 9. Integrate the Ollama provider into the NestJS AI module
-10. Verify that the backend can fall back to Ollama if Anthropic is unavailable
+10. Verify that the backend can fall back to Ollama if Gemini is unavailable
 
 #### Provider Orchestration Workflow
 
 1. Deterministic business services compute recommendations, risks, and anomaly flags
 2. The AI facade receives only the structured explanation context it needs
-3. The facade tries the `Anthropic` provider first
-4. If `Anthropic` fails, times out, or is disabled, the facade tries `Ollama qwen3:4b`
+3. The facade tries the `Gemini` provider first
+4. If `Gemini` fails, times out, or is disabled, the facade tries `Ollama qwen3:4b`
 5. If `qwen3:4b` fails, the facade tries `Ollama llama3.2`
 6. If all providers fail, the API returns deterministic results with no AI text or with a simple rule-based fallback explanation
 
 #### Verification Checklist
 
+- `GET /ai/status` reports provider configuration, reachability, and model availability
 - Explanation text is generated from backend data
-- Recommendation math is unchanged if `Anthropic` fails
-- `qwen3:4b` is used if `Anthropic` is unavailable
-- `llama3.2` is used if both `Anthropic` and `qwen3:4b` are unavailable
+- Recommendation math is unchanged if `Gemini` fails
+- `qwen3:4b` is used if `Gemini` is unavailable
+- `llama3.2` is used if both `Gemini` and `qwen3:4b` are unavailable
 - The application still returns deterministic results if all providers fail
-- No frontend code directly uses the `Anthropic` key or the `Ollama` runtime
+- No frontend code directly uses the `Gemini` key or the `Ollama` runtime
 
 ### Phase 10: BullMQ and Redis Jobs
 

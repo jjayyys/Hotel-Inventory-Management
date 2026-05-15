@@ -1,19 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
-import { AnthropicProvider } from './providers/anthropic.provider';
+import { GeminiProvider } from './providers/gemini.provider';
 import { AiProviderOrchestratorService } from './providers/ai-provider-orchestrator.service';
 import { OllamaProvider } from './providers/ollama.provider';
 
 @Module({
   imports: [ConfigModule],
+  controllers: [AiController],
   providers: [
     AiService,
-    AnthropicProvider,
+    GeminiProvider,
     {
-      provide: 'AI_PROVIDER_ANTHROPIC',
-      inject: [AnthropicProvider],
-      useFactory: (provider: AnthropicProvider) => provider,
+      provide: 'AI_PROVIDER_GEMINI',
+      inject: [GeminiProvider],
+      useFactory: (provider: GeminiProvider) => provider,
     },
     {
       provide: 'AI_PROVIDER_OLLAMA_QWEN',
@@ -31,19 +33,19 @@ import { OllamaProvider } from './providers/ollama.provider';
       provide: AiProviderOrchestratorService,
       inject: [
         ConfigService,
-        'AI_PROVIDER_ANTHROPIC',
+        'AI_PROVIDER_GEMINI',
         'AI_PROVIDER_OLLAMA_QWEN',
         'AI_PROVIDER_OLLAMA_LLAMA',
       ],
       useFactory: (
         configService: ConfigService,
-        anthropicProvider: AnthropicProvider,
+        geminiProvider: GeminiProvider,
         ollamaQwenProvider: OllamaProvider,
         ollamaLlamaProvider: OllamaProvider,
       ) =>
         new AiProviderOrchestratorService(
           configService,
-          anthropicProvider,
+          geminiProvider,
           ollamaQwenProvider,
           ollamaLlamaProvider,
         ),

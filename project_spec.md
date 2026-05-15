@@ -6,6 +6,8 @@ This project is a web-based food inventory management system for hotel food and 
 
 The system is intended to support hotel kitchen and inventory teams by combining inventory records, estimated consumption, purchasing parameters, and operational business signals such as occupancy and restaurant activity. It also includes an AI-assisted analysis layer to help explain recommendations, summarize unusual patterns, and improve decision-making efficiency through a provider-abstracted LLM integration.
 
+Use `README.md` for local setup and day-to-day development commands. This document remains the source of truth for product scope, workflows, and business requirements.
+
 For the initial version of this project, the system will use mock data instead of live integrations from POS systems, hotel PMS systems, or supplier platforms.
 
 ## 2. Problem Statement
@@ -181,11 +183,12 @@ The current source materials imply this workflow but do not describe it explicit
 ### 8.6 AI-Assisted Analysis
 
 - The system shall use an LLM-based component behind a provider abstraction layer
-- The system shall support AI provider priority in the order `Anthropic API -> Ollama qwen3:4b -> Ollama llama3.2`
+- The system shall support AI provider priority in the order `Gemini AI (Google AI Studio) -> Ollama qwen3:4b -> Ollama llama3.2`
 - The system shall generate human-readable explanations for replenishment suggestions
 - The system shall explain unusual consumption or waste patterns identified by deterministic business logic
 - The system shall provide recommendation summaries for managers
 - The system shall gracefully continue operating if all AI providers are unavailable
+- The system shall expose backend-only provider health and status information for verification without exposing provider secrets to frontend clients
 - The AI component shall not overwrite deterministic EOQ calculations without traceable business rules
 
 ### 8.7 Simulation
@@ -312,7 +315,7 @@ The proposed architecture is a modular web application with separate responsibil
 ### AI Analysis Service
 
 - Receives structured recommendation, demand, and anomaly context from deterministic backend services
-- Uses a provider abstraction to call `Anthropic API` first, then `Ollama qwen3:4b`, then `Ollama llama3.2`
+- Uses a provider abstraction to call `Gemini AI (Google AI Studio)` first, then `Ollama qwen3:4b`, then `Ollama llama3.2`
 - Produces natural-language insights and anomaly explanations
 - Assists interpretation without replacing core deterministic calculations
 
@@ -402,7 +405,7 @@ The source materials do not mandate a fixed stack, so the following is a recomme
 - Backend: NestJS with TypeScript
 - Database: PostgreSQL
 - ORM: Prisma
-- AI Integration: Anthropic API with Ollama fallback (`qwen3:4b`, then `llama3.2`)
+- AI Integration: Gemini AI (Google AI Studio) with Ollama fallback (`qwen3:4b`, then `llama3.2`)
 - Charting: Recharts
 - Authentication: JWT with role-based access control
 - Background Jobs: BullMQ with Redis
@@ -413,7 +416,7 @@ The source materials do not mandate a fixed stack, so the following is a recomme
 ### Runtime and Hardware Compatibility
 
 - The default system is CPU-first and fully functional without local acceleration hardware
-- Anthropic API keeps the hosted AI path hardware-independent on the client or server host
+- Gemini AI keeps the hosted AI path hardware-independent on the client or server host
 - Optional local AI through Ollama should support fallback across `GPU -> MPS -> CPU` when local acceleration is available
 - The deployment design should remain compatible with CPU-only machines, NVIDIA GPU-enabled machines, and Apple Silicon systems
 - If future local model execution or accelerated analytics are introduced, they must support graceful fallback from `GPU` to `MPS` to `CPU`

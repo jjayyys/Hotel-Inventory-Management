@@ -14,6 +14,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { WasteModule } from './waste/waste.module';
 import { ReplenishmentModule } from './replenishment/replenishment.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { DemandForecastsModule } from './demand-forecasts/demand-forecasts.module';
 import { SimulationModule } from './simulation/simulation.module';
 import { AiModule } from './ai/ai.module';
 
@@ -32,6 +33,7 @@ import { AiModule } from './ai/ai.module';
     WasteModule,
     ReplenishmentModule,
     RecommendationsModule,
+    DemandForecastsModule,
     SimulationModule,
     AiModule,
   ],

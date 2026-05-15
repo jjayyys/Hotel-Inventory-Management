@@ -4,12 +4,14 @@
 
 This document defines the selected technology stack for the Hotel Food Waste Management system and explains how each technology contributes to the system. It turns the high-level recommendations in `project_spec.md` into a concrete implementation direction for development.
 
+Use `README.md` for local setup and daily run commands. This document remains the source of truth for stack choices, architecture rationale, and runtime assumptions.
+
 The selected stack is designed to support:
 
 - A web-based dashboard for hotel inventory operations
 - EOQ and reorder-point calculations by SKU
 - Mock-data-driven development in phase one
-- AI-assisted insights using a dual-provider LLM layer with `Anthropic API` as primary and `Ollama` as local fallback
+- AI-assisted insights using a dual-provider LLM layer with `Gemini AI (Google AI Studio)` as primary and `Ollama` as local fallback
 - Future expansion into production-grade integrations and scheduling
 
 ## 2. Selected Technology Stack
@@ -36,7 +38,7 @@ The selected stack is designed to support:
 
 ### AI Integration
 
-- `Anthropic API`
+- `Gemini AI (Google AI Studio)`
 - `Ollama`
 
 ### Background Processing
@@ -277,15 +279,15 @@ Implementation note:
 - In Prisma ORM v7, the database connection URL is configured in `prisma.config.ts` instead of the Prisma schema file
 - The backend runtime should instantiate Prisma Client using the PostgreSQL adapter rather than relying on the legacy direct constructor flow
 
-### 4.10 Anthropic API and Ollama
+### 4.10 Gemini AI and Ollama
 
 The AI layer should use a provider abstraction with this priority order:
 
-1. `Anthropic API`
+1. `Gemini AI (Google AI Studio)`
 2. `Ollama qwen3:4b`
 3. `Ollama llama3.2`
 
-`Anthropic API` is the primary hosted provider and `Ollama` is the local fallback runtime for AI-assisted analysis.
+`Gemini AI (Google AI Studio)` is the primary hosted provider and `Ollama` is the local fallback runtime for AI-assisted analysis.
 
 Its contribution to the system:
 
@@ -305,7 +307,7 @@ What it does not do:
 Why it was selected:
 
 - The project requires AI support for interpretation and explanation
-- `Anthropic API` provides a strong first-choice hosted provider for readable business explanations
+- `Gemini AI (Google AI Studio)` provides a strong first-choice hosted provider for readable business explanations
 - `Ollama` provides a practical local fallback for development, offline testing, or hosted-provider failure
 - The deterministic inventory logic remains in the backend regardless of which provider writes the explanation
 
@@ -318,6 +320,8 @@ Implementation note:
 
 - The backend should expose one AI service to the rest of the application and hide provider selection behind that service
 - Prompts, response parsing, timeouts, and output validation should be shared across providers where possible
+- Provider health checks, model-availability checks, and retry policy should stay centralized in the backend AI orchestration layer
+- A protected backend status endpoint should make provider verification possible without exposing any provider secrets to the frontend
 - If all providers fail, the API should still return deterministic recommendation results without blocking the user flow
 
 ### 4.11 BullMQ and Redis
@@ -382,7 +386,7 @@ Environment variables stored in `.env` files will manage configurable settings.
 Their contribution to the system:
 
 - Separate secrets and environment-specific configuration from source code
-- Store settings such as database connection strings, JWT secrets, Redis URLs, Anthropic API keys, and Ollama endpoint and model names
+- Store settings such as database connection strings, JWT secrets, Redis URLs, Gemini API keys, and Ollama endpoint and model names
 
 Why it was selected:
 
@@ -405,7 +409,7 @@ Why they were selected:
 
 ## 5. Runtime Compatibility Across CPU, GPU, and MPS
 
-The current architecture is designed to be fully functional on `CPU` by default. This is important because the primary hosted AI path uses the `Anthropic API`, which performs the model inference externally rather than requiring local GPU execution.
+The current architecture is designed to be fully functional on `CPU` by default. This is important because the primary hosted AI path uses `Gemini AI`, which performs the model inference externally rather than requiring local GPU execution.
 
 ### What this means for the current system
 
@@ -436,7 +440,7 @@ This prevents the project from becoming locked to one hardware vendor or one ope
 - No core application logic should depend on CUDA-only libraries
 - Any future accelerated module should expose a CPU fallback path
 - Docker and deployment scripts should avoid assumptions that only work on one processor architecture
-- The AI layer should stay isolated behind backend services so the rest of the application remains hardware-agnostic whether it uses `Anthropic API` or `Ollama`
+- The AI layer should stay isolated behind backend services so the rest of the application remains hardware-agnostic whether it uses `Gemini AI` or `Ollama`
 
 ## 6. How the Stack Supports Input -> Process -> Output
 
@@ -462,7 +466,7 @@ Technologies involved:
 - `Prisma` loads transactional and master data needed for calculations
 - `PostgreSQL` stores intermediate and historical records
 - `BullMQ` and `Redis` support scheduled recalculation or asynchronous processing
-- `Anthropic API` or `Ollama` generates explanations and analytical summaries after core calculations are complete
+- `Gemini AI` or `Ollama` generates explanations and analytical summaries after core calculations are complete
 
 ### Output Layer
 
@@ -473,7 +477,7 @@ Technologies involved:
 - `NestJS` exposes recommendation and report endpoints
 - `Next.js` renders dashboard pages and tables
 - `Recharts` visualizes trends and business metrics
-- `Anthropic API` or `Ollama` provides natural-language insights
+- `Gemini AI` or `Ollama` provides natural-language insights
 
 ## 7. Security Considerations
 
@@ -485,7 +489,7 @@ The selected stack supports several important security needs:
 - `.env` configuration helps keep API keys and secrets out of source control
 - `NestJS` validation reduces the chance of malformed data entering the system
 
-The Anthropic API key must be stored securely and never exposed in frontend code. All LLM calls should be made through the backend. If `Ollama` is used, its local endpoint should also remain backend-only so the frontend never talks directly to the model runtime.
+The Gemini API key must be stored securely and never exposed in frontend code. All LLM calls should be made through the backend. If `Ollama` is used, its local endpoint should also remain backend-only so the frontend never talks directly to the model runtime.
 
 ## 8. Scalability and Maintainability
 
@@ -524,6 +528,6 @@ The chosen stack leaves room for future improvements:
 
 ## 11. Conclusion
 
-This technology stack balances practicality, maintainability, and future growth. It supports the system’s most important needs: reliable inventory data management, transparent EOQ-based replenishment logic, useful dashboards, and AI-assisted explanations through a dual-provider AI layer with `Anthropic API` as primary and `Ollama` as local fallback.
+This technology stack balances practicality, maintainability, and future growth. It supports the system’s most important needs: reliable inventory data management, transparent EOQ-based replenishment logic, useful dashboards, and AI-assisted explanations through a dual-provider AI layer with `Gemini AI (Google AI Studio)` as primary and `Ollama` as local fallback.
 
 The result is a stack that is strong enough for a real implementation while still appropriate for a mock-data-first development phase.

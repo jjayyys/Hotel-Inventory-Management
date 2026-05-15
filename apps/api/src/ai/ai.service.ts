@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AiGenerationResponse,
+  AiProviderStatusSummary,
   RecommendationExplanationContext,
 } from './ai.types';
 import { buildRecommendationExplanationPrompt } from './prompts/recommendation-explainer.prompt';
@@ -51,6 +52,10 @@ export class AiService {
         fallback: true,
       };
     }
+  }
+
+  getProviderStatusSummary(): Promise<AiProviderStatusSummary> {
+    return this.orchestrator.getProviderStatusSummary();
   }
 
   private buildRuleBasedFallback(context: RecommendationExplanationContext) {
