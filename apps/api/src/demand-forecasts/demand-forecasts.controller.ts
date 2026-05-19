@@ -25,7 +25,8 @@ export class DemandForecastsController {
   ) {}
 
   @ApiOperation({
-    summary: 'List demand forecasts with optional filtering by SKU, hotel, or period',
+    summary:
+      'List demand forecasts with optional filtering by SKU, hotel, or period',
   })
   @Roles(...READ_ROLES)
   @Get()

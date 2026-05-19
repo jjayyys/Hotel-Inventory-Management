@@ -167,9 +167,7 @@ export class AiProviderOrchestratorService {
       this.configService.get<string>('AI_RETRY_ATTEMPTS', '2'),
     );
 
-    return Number.isFinite(rawValue) && rawValue > 0
-      ? Math.floor(rawValue)
-      : 1;
+    return Number.isFinite(rawValue) && rawValue > 0 ? Math.floor(rawValue) : 1;
   }
 
   private getRetryDelayMs() {

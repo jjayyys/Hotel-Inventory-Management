@@ -1,7 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+const { Decimal } = Prisma;
 import { ReplenishmentService } from './replenishment.service';
 
 describe('ReplenishmentService', () => {
@@ -121,9 +122,7 @@ describe('ReplenishmentService', () => {
       ],
     };
 
-    jest
-      .spyOn(prisma.sku, 'findMany')
-      .mockResolvedValue([mockSku] as never);
+    jest.spyOn(prisma.sku, 'findMany').mockResolvedValue([mockSku] as never);
     jest.spyOn(prisma.recipe, 'findMany').mockResolvedValue([] as never);
     jest
       .spyOn(prisma.posTransaction, 'findMany')

@@ -148,7 +148,7 @@ export class GeminiProvider implements AiProvider {
     const candidate =
       typeof error === 'object' && error !== null
         ? ((error as Record<string, unknown>).status ??
-            (error as Record<string, unknown>).code)
+          (error as Record<string, unknown>).code)
         : undefined;
 
     return typeof candidate === 'number' ? candidate : undefined;

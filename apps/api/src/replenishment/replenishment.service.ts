@@ -122,8 +122,10 @@ export class ReplenishmentService {
         const usage =
           transaction.quantity_sold * Number(recipe.quantityPerServing);
         const skuUsageByDate = dailyDemandBySku.get(recipe.skuId) ?? new Map();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const current = skuUsageByDate.get(dateKey) ?? 0;
         skuUsageByDate.set(dateKey, current + usage);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         dailyDemandBySku.set(recipe.skuId, skuUsageByDate);
       }
     }
@@ -138,7 +140,8 @@ export class ReplenishmentService {
     }
 
     const results = activeSkus.map((sku) => {
-      const skuDailyUsage = dailyDemandBySku.get(sku.id) ?? new Map();
+      const skuDailyUsage: Map<string, number> =
+        dailyDemandBySku.get(sku.id) ?? new Map<string, number>();
       const dailyPoints: DailyDemandPoint[] = this.buildDailyDemandPoints(
         calculationWindow.historyStart,
         daysWindow,

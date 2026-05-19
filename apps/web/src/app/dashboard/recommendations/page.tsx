@@ -15,8 +15,13 @@ import {
   fetchDashboardDataset,
   filterRecommendations,
 } from "@/services/dashboard";
-import { recalculateRecommendations } from "@/services/recommendations";
+import {
+  recalculateRecommendations,
+  generateRecommendationExplanation,
+  type RecommendationExplanationResponse,
+} from "@/services/recommendations";
 import { DashboardDataset } from "@/types/dashboard";
+import { Spinner } from "@/components/ui/spinner";
 
 function riskBadge(risk: string) {
   const classes =
@@ -40,6 +45,13 @@ export default function RecommendationsPage() {
   const [search, setSearch] = useState("");
   const [riskFilter, setRiskFilter] = useState("all");
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [selectedRecommendationId, setSelectedRecommendationId] = useState<
+    string | null
+  >(null);
+  const [isGeneratingExplanation, setIsGeneratingExplanation] =
+    useState(false);
+  const [explanationData, setExplanationData] =
+    useState<RecommendationExplanationResponse | null>(null);
 
   useEffect(() => {
     fetchDashboardDataset().then(setDataset).catch(console.error);
@@ -61,6 +73,70 @@ export default function RecommendationsPage() {
       setDataset(await fetchDashboardDataset());
     } finally {
       setIsRecalculating(false);
+    }
+  }
+
+  async function handleGetInsight(recommendationId: string) {
+    setSelectedRecommendationId(recommendationId);
+    setIsGeneratingExplanation(true);
+
+    try {
+      const response = await generateRecommendationExplanation(
+        recommendationId,
+      );
+      setExplanationData(response);
+    } catch (error) {
+      console.error("Failed to generate explanation:", error);
+      setExplanationData({
+        recommendationId,
+        provider: "rule-based-fallback",
+        explanation:
+          "Failed to generate explanation. Please try again later.",
+        cached: false,
+        fallback: true,
+      });
+    } finally {
+      setIsGeneratingExplanation(false);
+    }
+  }
+
+  async function handleRegenerate() {
+    if (!selectedRecommendationId) return;
+
+    setIsGeneratingExplanation(true);
+
+    try {
+      const response = await generateRecommendationExplanation(
+        selectedRecommendationId,
+        true,
+      );
+      setExplanationData(response);
+    } catch (error) {
+      console.error("Failed to regenerate explanation:", error);
+    } finally {
+      setIsGeneratingExplanation(false);
+    }
+  }
+
+  function closeModal() {
+    setSelectedRecommendationId(null);
+    setExplanationData(null);
+  }
+
+  function getProviderBadgeColor(provider: string) {
+    switch (provider) {
+      case "gemini":
+        return "bg-[rgba(66,133,244,0.12)] text-[#4285f4]";
+      case "ollama_qwen":
+        return "bg-[rgba(255,82,0,0.12)] text-[#ff5200]";
+      case "ollama_llama":
+        return "bg-[rgba(255,193,7,0.12)] text-[#ffc107]";
+      case "rule-based-fallback":
+        return "bg-[rgba(120,120,45,0.12)] text-[#6b6b1f]";
+      case "cached":
+        return "bg-[rgba(13,148,136,0.12)] text-[var(--accent-strong)]";
+      default:
+        return "bg-[rgba(120,120,120,0.12)] text-[#777]";
     }
   }
 
@@ -163,11 +239,104 @@ export default function RecommendationsPage() {
                   align: "right",
                   render: (row) => row.estimated_days_of_cover,
                 },
+                {
+                  key: "insight",
+                  label: "",
+                  render: (row) => (
+                    <button
+                      onClick={() => handleGetInsight(row.id)}
+                      className="rounded-lg border border-[var(--line-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-2)]"
+                    >
+                      Insight
+                    </button>
+                  ),
+                },
               ]}
             />
           )}
         </div>
       </AppShell>
+
+      {selectedRecommendationId && explanationData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[var(--line-soft)] bg-white shadow-lg">
+            <div className="border-b border-[var(--line-soft)] px-6 py-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--foreground)]">
+                    AI Recommendation Insight
+                  </h3>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    {visibleRecommendations
+                      .find((r) => r.id === selectedRecommendationId)
+                      ?.sku.name || "Loading..."}
+                  </p>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="text-[var(--muted)] transition hover:text-[var(--foreground)]"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-[var(--muted)]">
+                  Provider:
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${getProviderBadgeColor(
+                    explanationData.provider,
+                  )}`}
+                >
+                  {explanationData.provider.replace(/_/g, " ")}
+                </span>
+                {explanationData.cached && (
+                  <span className="text-xs text-[var(--muted)]">• Cached</span>
+                )}
+                {explanationData.fallback && (
+                  <span className="text-xs text-[var(--warning)]">
+                    • Fallback
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-xl bg-[var(--surface-2)] p-4">
+                {isGeneratingExplanation ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    <span className="text-sm text-[var(--muted)]">
+                      Generating explanation...
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-7 text-[var(--foreground)]">
+                    {explanationData.explanation}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-[var(--line-soft)] px-6 py-4 flex gap-3 justify-end">
+              <button
+                onClick={handleRegenerate}
+                disabled={isGeneratingExplanation}
+                className="rounded-xl border border-[var(--line-strong)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Regenerate
+              </button>
+              <button
+                onClick={closeModal}
+                className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthGuard>
   );
 }

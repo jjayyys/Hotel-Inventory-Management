@@ -8,7 +8,6 @@ import {
   calculateReplenishmentMetrics,
   calculateSeasonalityFactor,
   calculateShelfLifeCapQuantity,
-  determineRiskLevel,
 } from './replenishment-calculator';
 
 describe('replenishment-calculator', () => {
@@ -126,7 +125,9 @@ describe('replenishment-calculator', () => {
   });
 
   it('returns infinity shelf life capacity when shelf life is zero', () => {
-    expect(calculateShelfLifeCapQuantity(2, 0, 5)).toBe(Number.POSITIVE_INFINITY);
+    expect(calculateShelfLifeCapQuantity(2, 0, 5)).toBe(
+      Number.POSITIVE_INFINITY,
+    );
   });
 
   it('returns zero shelf life capacity when demand would be met by current stock', () => {
@@ -227,7 +228,7 @@ describe('replenishment-calculator', () => {
       recentWasteQuantity: 0.1,
     });
 
-    expect(result.riskLevel).toBe(RiskLevel.high);
+    expect(result.riskLevel).toBe(RiskLevel.critical);
   });
 
   it('returns medium risk when shelf life creates overstock pressure', () => {

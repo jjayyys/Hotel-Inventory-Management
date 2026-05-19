@@ -1,17 +1,19 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/unbound-method */
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Decimal } from '@prisma/client/runtime/library';
 import { RiskLevel } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReplenishmentService } from '../replenishment/replenishment.service';
 import { RecommendationsService } from './recommendations.service';
 
+const { Decimal } = Prisma;
+
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
   let prisma: PrismaService;
   let replenishment: ReplenishmentService;
-  let aiService: AiService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -85,11 +87,12 @@ describe('RecommendationsService', () => {
 
       jest
         .spyOn(prisma.replenishmentRecommendation, 'findUnique')
-        .mockResolvedValueOnce(mockRecommendation as never);
+        .mockResolvedValueOnce(mockRecommendation);
 
       const result = await service.findById('rec-1');
 
       expect(result).toEqual(mockRecommendation);
+
       expect(
         prisma.replenishmentRecommendation.findUnique,
       ).toHaveBeenCalledWith({
@@ -101,7 +104,7 @@ describe('RecommendationsService', () => {
     it('throws NotFoundException when recommendation does not exist', async () => {
       jest
         .spyOn(prisma.replenishmentRecommendation, 'findUnique')
-        .mockResolvedValueOnce(null as never);
+        .mockResolvedValueOnce(null);
 
       await expect(service.findById('invalid-id')).rejects.toThrow(
         NotFoundException,
@@ -146,7 +149,7 @@ describe('RecommendationsService', () => {
 
       jest
         .spyOn(replenishment, 'calculateHotelRecommendations')
-        .mockResolvedValue(mockCalcResult as never);
+        .mockResolvedValue(mockCalcResult);
 
       jest
         .spyOn(prisma, '$transaction')
@@ -154,16 +157,16 @@ describe('RecommendationsService', () => {
 
       jest
         .spyOn(prisma.demandForecast, 'deleteMany')
-        .mockResolvedValueOnce({ count: 0 } as never);
+        .mockResolvedValueOnce({ count: 0 });
       jest
         .spyOn(prisma.replenishmentRecommendation, 'deleteMany')
-        .mockResolvedValueOnce({ count: 0 } as never);
+        .mockResolvedValueOnce({ count: 0 });
       jest
         .spyOn(prisma.demandForecast, 'createMany')
-        .mockResolvedValueOnce({ count: 1 } as never);
+        .mockResolvedValueOnce({ count: 1 });
       jest
         .spyOn(prisma.replenishmentRecommendation, 'createMany')
-        .mockResolvedValueOnce({ count: 1 } as never);
+        .mockResolvedValueOnce({ count: 1 });
 
       const result = await service.bulkRecalculate({
         hotelIds: ['hotel-1', 'hotel-2'],
@@ -209,14 +212,13 @@ describe('RecommendationsService', () => {
 
       jest
         .spyOn(prisma.replenishmentRecommendation, 'findMany')
-        .mockResolvedValueOnce(mockRecs as never);
+        .mockResolvedValueOnce(mockRecs);
 
       const result = await service.findAll({});
 
       expect(result).toHaveLength(1);
-      expect(
-        prisma.replenishmentRecommendation.findMany,
-      ).toHaveBeenCalled();
+
+      expect(prisma.replenishmentRecommendation.findMany).toHaveBeenCalled();
     });
 
     it('filters recommendations by hotelId', async () => {
@@ -226,9 +228,7 @@ describe('RecommendationsService', () => {
 
       await service.findAll({ hotelId: 'hotel-1' });
 
-      expect(
-        prisma.replenishmentRecommendation.findMany,
-      ).toHaveBeenCalledWith(
+      expect(prisma.replenishmentRecommendation.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             sku: {

@@ -245,27 +245,29 @@ export class RecommendationsService {
     };
   }
 
-  private buildRuleBasedFallback(recommendation: {
-    current_stock: number | { toNumber(): number };
-    reorder_point: number | { toNumber(): number };
-    recommended_quantity: number | { toNumber(): number };
-    eoq_value: number | { toNumber(): number };
-    estimated_days_of_cover: number | { toNumber(): number };
-    sku: {
-      unit: string;
-      shelf_life_days: number;
-      safety_stock: number | { toNumber(): number };
-    };
-  }, recentWaste: number, leadTimeDays: number): string {
+  private buildRuleBasedFallback(
+    recommendation: {
+      current_stock: number | { toNumber(): number };
+      reorder_point: number | { toNumber(): number };
+      recommended_quantity: number | { toNumber(): number };
+      eoq_value: number | { toNumber(): number };
+      estimated_days_of_cover: number | { toNumber(): number };
+      sku: {
+        unit: string;
+        shelf_life_days: number;
+        safety_stock: number | { toNumber(): number };
+      };
+    },
+    recentWaste: number,
+    leadTimeDays: number,
+  ): string {
     const currentStock = this.toNumber(recommendation.current_stock);
     const reorderPoint = this.toNumber(recommendation.reorder_point);
     const recommendedQuantity = this.toNumber(
       recommendation.recommended_quantity,
     );
     const eoqValue = this.toNumber(recommendation.eoq_value);
-    const daysOfCover = this.toNumber(
-      recommendation.estimated_days_of_cover,
-    );
+    const daysOfCover = this.toNumber(recommendation.estimated_days_of_cover);
     const safetyStock = this.toNumber(recommendation.sku.safety_stock);
 
     const reorderSignal =
@@ -286,9 +288,7 @@ export class RecommendationsService {
     return `${reorderSignal} ${coverSignal} Safety stock is set at ${safetyStock} ${recommendation.sku.unit} and EOQ is ${eoqValue.toFixed(2)} ${recommendation.sku.unit}. ${wasteSignal}`;
   }
 
-  private toNumber(
-    value: number | { toNumber(): number },
-  ): number {
+  private toNumber(value: number | { toNumber(): number }): number {
     return typeof value === 'number' ? value : value.toNumber();
   }
 }

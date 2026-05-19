@@ -32,7 +32,8 @@ function createProvider(
     providerName,
     generate: options?.generate ?? jest.fn(),
     getStatus:
-      options?.getStatus ?? jest.fn().mockResolvedValue(createStatus(providerName)),
+      options?.getStatus ??
+      jest.fn().mockResolvedValue(createStatus(providerName)),
   };
 }
 
@@ -80,7 +81,9 @@ describe('AiProviderOrchestratorService', () => {
       provider: 'gemini',
       text: 'from gemini',
     });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(gemini.generate).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(qwen.generate).not.toHaveBeenCalled();
   });
 
@@ -110,7 +113,9 @@ describe('AiProviderOrchestratorService', () => {
       provider: 'ollama-qwen',
       text: 'from qwen',
     });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(gemini.generate).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(qwen.generate).toHaveBeenCalledTimes(1);
   });
 
@@ -134,7 +139,9 @@ describe('AiProviderOrchestratorService', () => {
     await expect(service.generateWithFallback(request)).rejects.toThrow(
       'All AI providers failed.',
     );
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(qwen.generate).not.toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(llama.generate).not.toHaveBeenCalled();
   });
 
@@ -163,7 +170,9 @@ describe('AiProviderOrchestratorService', () => {
       provider: 'gemini',
       text: 'recovered',
     });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(gemini.generate).toHaveBeenCalledTimes(2);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(qwen.generate).not.toHaveBeenCalled();
   });
 
